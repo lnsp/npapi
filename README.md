@@ -3,7 +3,7 @@
 A lightweight Go wrapper for the Nanopool Ethereum API.
 
 ## Example
-````go
+```go
 package main
 
 import (
