@@ -1,3 +1,6 @@
+// Package npapi provides a lightweight wrapper for the Nanopool Ethereum API.
+//
+// See https://eth.nanopool.org/api for more information.
 package npapi
 
 const (

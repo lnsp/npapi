@@ -1,3 +1,6 @@
+// Package npapi provides a lightweight wrapper for the Nanopool Ethereum API.
+//
+// See https://eth.nanopool.org/api for more information.
 package npapi
 
 import (
@@ -5,12 +8,18 @@ import (
 	"time"
 )
 
+// These constants are used for identifying hashrate intervals.
 const (
-	OneHour         Interval = "h1"
-	ThreeHours               = "h3"
-	SixHours                 = "h6"
-	TwelveHours              = "h12"
-	TwentyfourHours          = "h24"
+	// One hour interval
+	OneHour Interval = "h1"
+	// Three hour interval
+	ThreeHours = "h3"
+	// Six hour interval
+	SixHours = "h6"
+	// Twelve hour interval
+	TwelveHours = "h12"
+	// Twentyfour hour interval
+	TwentyfourHours = "h24"
 )
 
 type Time time.Time
