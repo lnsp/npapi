@@ -26,11 +26,20 @@ func (t *Time) UnmarshalJSON(b []byte) error {
 
 type Interval string
 
+// Payment is a nanopool.org payment.
+type Payment struct {
+	Date      Time
+	TxHash    string
+	Amount    float64
+	Confirmed bool
+}
+
 // Worker is a nanopool.org worker. It represents one mining machine.
 type Worker struct {
 	ID               string
 	Hashrate         float64
 	LastShare        Time
+	Rating           uint
 	AverageHashrates map[Interval]float64
 }
 
@@ -55,6 +64,12 @@ type ChartItem struct {
 type HistoryItem struct {
 	Date     Time
 	Hashrate float64
+}
+
+// ShareItem stores share history metrics.
+type ShareItem struct {
+	Date   Time
+	Shares uint
 }
 
 // UserInfo retrieves a complete set of user information including workers and hashrate statistics.
@@ -190,4 +205,147 @@ func HashrateHistory(addr string) ([]HistoryItem, error) {
 		history[i] = HistoryItem(jsonHistory[i])
 	}
 	return history, nil
+}
+
+// HashrateAndBalance retrieves the current hashrate and balance.
+func HashrateAndBalance(addr string) (float64, float64, error) {
+	data := struct {
+		Hashrate float64 `json:"hashrate"`
+		Balance  float64 `json:"balance"`
+	}{}
+	if err := fetch(&data, balanceHashrateEndpoint, addr); err != nil {
+		return data.Hashrate, data.Balance, err
+	}
+	return data.Hashrate, data.Balance, nil
+}
+
+// ReportedHashrate retrieves the last reported hashrate.
+func ReportedHashrate(addr string) (float64, error) {
+	var hashrate float64
+	if err := fetch(&hashrate, reportedHashrateEndpoint, addr); err != nil {
+		return hashrate, err
+	}
+	return hashrate, nil
+}
+
+// Workers retrieves a list of workers bound to this account.
+func Workers(addr string) ([]Worker, error) {
+	jsonWorkers := []struct {
+		ID        string  `json:"id"`
+		Hashrate  float64 `json:"hashrate"`
+		LastShare Time    `json:"lastShare"`
+		Rating    uint    `json:"rating"`
+	}{}
+	if err := fetch(&jsonWorkers, workersEndpoint, addr); err != nil {
+		return nil, err
+	}
+	workers := make([]Worker, len(jsonWorkers))
+	for i, w := range jsonWorkers {
+		workers[i] = Worker{
+			ID:               w.ID,
+			Hashrate:         w.Hashrate,
+			LastShare:        w.LastShare,
+			Rating:           w.Rating,
+			AverageHashrates: map[Interval]float64{},
+		}
+	}
+	return workers, nil
+}
+
+// Payments retrieves a list of occured payments from nanopool to the user.
+func Payments(addr string) ([]Payment, error) {
+	jsonPayments := []struct {
+		Date      Time    `json:"date"`
+		TxHash    string  `json:"txhash"`
+		Amount    float64 `json:"amount"`
+		Confirmed bool    `json:"confirmed"`
+	}{}
+	if err := fetch(&jsonPayments, paymentsEndpoint, addr); err != nil {
+		return nil, err
+	}
+	payments := make([]Payment, len(jsonPayments))
+	for i, p := range jsonPayments {
+		payments[i] = Payment(p)
+	}
+	return payments, nil
+}
+
+// ShareHistory retrieves a history of share rate metrics.
+func ShareHistory(addr string) ([]ShareItem, error) {
+	jsonHistory := []struct {
+		Date   Time `json:"date"`
+		Shares uint `json:"shares"`
+	}{}
+	if err := fetch(&jsonHistory, sharerateHistoryEndpoint, addr); err != nil {
+		return nil, err
+	}
+	history := make([]ShareItem, len(jsonHistory))
+	for i, s := range jsonHistory {
+		history[i] = ShareItem(s)
+	}
+	return history, nil
+}
+
+// WorkersAverageHashrateIn retrieves a list of workers, each associated with its hashrate in the given interval.
+func WorkersAverageHashrateIn(addr string, interval uint) ([]Worker, error) {
+	jsonWorkers := []struct {
+		ID       string  `json:"worker"`
+		Hashrate float64 `json:"hashrate"`
+	}{}
+	if err := fetch(&jsonWorkers, workersAverageHashrateLimitedEndpoint, addr, interval); err != nil {
+		return nil, err
+	}
+	workers := make([]Worker, len(jsonWorkers))
+	for i, w := range jsonWorkers {
+		workers[i] = Worker{
+			ID:               w.ID,
+			Hashrate:         w.Hashrate,
+			AverageHashrates: map[Interval]float64{},
+		}
+	}
+	return workers, nil
+}
+
+// WorkerAverageHashrate retrieves a list of workers, each associated with its hashrates.
+func WorkersAverageHashrate(addr string) (map[Interval][]Worker, error) {
+	jsonIntervals := map[Interval][]struct {
+		ID       string  `json:"worker"`
+		Hashrate float64 `json:"hashrate"`
+	}{}
+	if err := fetch(&jsonIntervals, workersAverageHashrateEndpoint, addr); err != nil {
+		return nil, err
+	}
+	intervals := make(map[Interval][]Worker)
+	for key, jsonWorkers := range jsonIntervals {
+		workers := make([]Worker, len(jsonWorkers))
+		for i, w := range jsonWorkers {
+			workers[i] = Worker{
+				ID:               w.ID,
+				Hashrate:         w.Hashrate,
+				AverageHashrates: map[Interval]float64{},
+			}
+		}
+		intervals[key] = workers
+	}
+	return intervals, nil
+}
+
+// WorkerReportedHashrate retrieves the last reported hashrate associated with each worker.
+func WorkerReportedHashrate(addr string) ([]Worker, error) {
+	jsonWorkers := []struct {
+		ID       string  `json:"worker"`
+		Hashrate float64 `json:"hashrate"`
+	}{}
+	if err := fetch(&jsonWorkers, workersReportedHashrateEndpoint, addr); err != nil {
+		return nil, err
+	}
+	workers := make([]Worker, len(jsonWorkers))
+	for i, w := range jsonWorkers {
+		workers[i] = Worker{
+			ID:               w.ID,
+			Hashrate:         w.Hashrate,
+			AverageHashrates: map[Interval]float64{},
+		}
+	}
+	return workers, nil
 }
