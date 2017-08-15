@@ -21,4 +21,9 @@ const (
 	workersAverageHashrateLimitedEndpoint = "%s/avghashrateworkers/%s/%d"
 	workersAverageHashrateEndpoint        = "%s/avghashrateworkers/%s"
 	workersReportedHashrateEndpoint       = "%s/reportedhashrates/%s"
+	averageBlocktimeEndpoint              = "%s/network/avgblocktime"
+	blockStatsEndpoint                    = "%s/block_stats/%d/%d"
+	blockEndpoint                         = "%s/blocks/%d/%d"
+	lastBlockNumberEndpoint               = "%s/network/lastblocknumber"
+	timeToNextEpochEndpoint               = "%s/network/timetonextepoch"
 )
