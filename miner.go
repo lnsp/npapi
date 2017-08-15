@@ -5,20 +5,6 @@ import (
 	"time"
 )
 
-// These constants are used for identifying hashrate intervals.
-const (
-	// One hour interval
-	OneHour Interval = "h1"
-	// Three hour interval
-	ThreeHours = "h3"
-	// Six hour interval
-	SixHours = "h6"
-	// Twelve hour interval
-	TwelveHours = "h12"
-	// Twentyfour hour interval
-	TwentyfourHours = "h24"
-)
-
 type Time time.Time
 
 func (t *Time) UnmarshalJSON(b []byte) error {
@@ -29,9 +15,6 @@ func (t *Time) UnmarshalJSON(b []byte) error {
 	*t = Time(time.Unix(secs, 0))
 	return nil
 }
-
-// Interval is a hashrate interval.
-type Interval string
 
 // Payment is a nanopool.org payment.
 type Payment struct {
@@ -56,7 +39,7 @@ type Worker struct {
 	// Worker Rating
 	Rating uint
 	// Average hashrates
-	AverageHashrates map[Interval]float64
+	AverageHashrates HashrateReport
 }
 
 // HashrateItem stores an association between a worker and an (averaged) hashrate.
@@ -65,6 +48,27 @@ type HashrateItem struct {
 	ID string
 	// Worker Hashrate [MH/s]
 	Hashrate float64
+}
+
+// HashrateReport storing the (average) hashrates in the last one, six, three, twelve and twentyfour hours.
+type HashrateReport struct {
+	LastHour, LastThreeHours, LastSixHours, LastTwelveHours, LastDay float64
+}
+
+// toHashrateReport parses a hashrate map to a well defined report.
+func toHashrateReport(data map[string]float64) HashrateReport {
+	return HashrateReport{
+		LastHour:        data["h1"],
+		LastThreeHours:  data["h3"],
+		LastSixHours:    data["h6"],
+		LastTwelveHours: data["h12"],
+		LastDay:         data["h24"],
+	}
+}
+
+// WorkerHashrateReport is a nanopool worker report.
+type WorkerHashrateReport struct {
+	LastHour, LastThreeHours, LastSixHours, LastTwelveHours, LastDay []HashrateItem
 }
 
 // User is a nanopool.org user identified by his address. A user can have multiple workers.
@@ -78,7 +82,7 @@ type User struct {
 	// Account hashrate [MH/s]
 	Hashrate float64
 	// Average hashrate [MH/s]
-	AverageHashrates map[Interval]float64
+	AverageHashrates HashrateReport
 	// Workers
 	Workers []Worker
 }
@@ -109,13 +113,25 @@ type ShareItem struct {
 	Shares uint
 }
 
+// json balance struct
+type jsonBalance struct {
+	Status  bool    `json:"status"`
+	Balance float64 `json:"data"`
+}
+
+// json worker hasrate
+type jsonWorkerHashrate struct {
+	ID       string  `json:"worker"`
+	Hashrate float64 `json:"hashrate"`
+}
+
 // UserInfo retrieves a complete set of user information including workers and hashrate statistics.
 func UserInfo(addr string) (*User, error) {
 	var user struct {
-		Balance            string              `json:"balance"`
-		UnconfirmedBalance string              `json:"unconfirmed_balance"`
-		Hashrate           string              `json:"hashrate"`
-		AverageHashrates   map[Interval]string `json:"avghashrate"`
+		Balance            string            `json:"balance"`
+		UnconfirmedBalance string            `json:"unconfirmed_balance"`
+		Hashrate           string            `json:"hashrate"`
+		AverageHashrates   map[string]string `json:"avghashrate"`
 		Workers            []struct {
 			ID                 string `json:"id"`
 			Hashrate           string `json:"hashrate"`
@@ -132,12 +148,12 @@ func UserInfo(addr string) (*User, error) {
 	}
 	workers := make([]Worker, len(user.Workers))
 	for i, w := range user.Workers {
-		averageHashrates, err := parseHashrateMap(map[Interval]string{
-			OneHour:         w.AvgOneHour,
-			ThreeHours:      w.AvgThreeHours,
-			SixHours:        w.AvgSixHours,
-			TwelveHours:     w.AvgTwelveHours,
-			TwentyfourHours: w.AvgTwentyfourHours,
+		averageHashratesMap, err := parseStringMapToFloat(map[string]string{
+			"h1":  w.AvgOneHour,
+			"h3":  w.AvgThreeHours,
+			"h6":  w.AvgSixHours,
+			"h12": w.AvgTwelveHours,
+			"h24": w.AvgTwentyfourHours,
 		})
 		if err != nil {
 			return nil, err
@@ -150,11 +166,11 @@ func UserInfo(addr string) (*User, error) {
 			ID:               w.ID,
 			Hashrate:         currentHashrate,
 			LastShare:        w.LastShare,
-			AverageHashrates: averageHashrates,
+			AverageHashrates: toHashrateReport(averageHashratesMap),
 		}
 	}
 
-	averageHashrates, err := parseHashrateMap(user.AverageHashrates)
+	averageHashratesMap, err := parseStringMapToFloat(user.AverageHashrates)
 	if err != nil {
 		return nil, err
 	}
@@ -175,14 +191,9 @@ func UserInfo(addr string) (*User, error) {
 		Balance:            balance,
 		UnconfirmedBalance: unconfirmedBalance,
 		Hashrate:           currentHashrate,
-		AverageHashrates:   averageHashrates,
+		AverageHashrates:   toHashrateReport(averageHashratesMap),
 		Workers:            workers,
 	}, nil
-}
-
-type jsonBalance struct {
-	Status  bool    `json:"status"`
-	Balance float64 `json:"data"`
 }
 
 // Balance retrieves the accounts balance.
@@ -204,12 +215,12 @@ func AverageHashrateIn(addr string, hours uint) (float64, error) {
 }
 
 // AverageHashrate retrieves the average hashrate in the last one to twentyfour hours.
-func AverageHashrate(addr string) (map[Interval]float64, error) {
-	avgs := map[Interval]float64{}
+func AverageHashrate(addr string) (HashrateReport, error) {
+	avgs := map[string]float64{}
 	if err := fetch(&avgs, averageHashrateEndpoint, addr); err != nil {
-		return nil, err
+		return HashrateReport{}, err
 	}
-	return avgs, nil
+	return toHashrateReport(avgs), nil
 }
 
 // HashrateChart retrieves the hashrate chart data.
@@ -298,11 +309,10 @@ func Workers(addr string) ([]Worker, error) {
 	workers := make([]Worker, len(jsonWorkers))
 	for i, w := range jsonWorkers {
 		workers[i] = Worker{
-			ID:               w.ID,
-			Hashrate:         w.Hashrate,
-			LastShare:        w.LastShare,
-			Rating:           w.Rating,
-			AverageHashrates: map[Interval]float64{},
+			ID:        w.ID,
+			Hashrate:  w.Hashrate,
+			LastShare: w.LastShare,
+			Rating:    w.Rating,
 		}
 	}
 	return workers, nil
@@ -344,10 +354,7 @@ func ShareHistory(addr string) ([]ShareItem, error) {
 
 // WorkersAverageHashrateIn retrieves a list of workers, each associated with its hashrate in the given interval.
 func WorkersAverageHashrateIn(addr string, interval uint) ([]HashrateItem, error) {
-	jsonWorkers := []struct {
-		ID       string  `json:"worker"`
-		Hashrate float64 `json:"hashrate"`
-	}{}
+	jsonWorkers := []jsonWorkerHashrate{}
 	if err := fetch(&jsonWorkers, workersAverageHashrateLimitedEndpoint, addr, interval); err != nil {
 		return nil, err
 	}
@@ -359,31 +366,30 @@ func WorkersAverageHashrateIn(addr string, interval uint) ([]HashrateItem, error
 }
 
 // WorkerAverageHashrate retrieves a list of workers, each associated with its hashrates.
-func WorkersAverageHashrate(addr string) (map[Interval][]HashrateItem, error) {
-	jsonIntervals := map[Interval][]struct {
-		ID       string  `json:"worker"`
-		Hashrate float64 `json:"hashrate"`
-	}{}
-	if err := fetch(&jsonIntervals, workersAverageHashrateEndpoint, addr); err != nil {
-		return nil, err
-	}
-	intervals := make(map[Interval][]HashrateItem)
-	for key, jsonWorkers := range jsonIntervals {
+func WorkersAverageHashrate(addr string) (WorkerHashrateReport, error) {
+	toHashrateItemList := func(jsonWorkers []jsonWorkerHashrate) []HashrateItem {
 		workers := make([]HashrateItem, len(jsonWorkers))
 		for i, w := range jsonWorkers {
 			workers[i] = HashrateItem(w)
 		}
-		intervals[key] = workers
+		return workers
 	}
-	return intervals, nil
+	jsonIntervals := map[string][]jsonWorkerHashrate{}
+	if err := fetch(&jsonIntervals, workersAverageHashrateEndpoint, addr); err != nil {
+		return WorkerHashrateReport{}, err
+	}
+	return WorkerHashrateReport{
+		LastHour:        toHashrateItemList(jsonIntervals["h1"]),
+		LastThreeHours:  toHashrateItemList(jsonIntervals["h3"]),
+		LastSixHours:    toHashrateItemList(jsonIntervals["h6"]),
+		LastTwelveHours: toHashrateItemList(jsonIntervals["h12"]),
+		LastDay:         toHashrateItemList(jsonIntervals["h24"]),
+	}, nil
 }
 
 // WorkerReportedHashrate retrieves the last reported hashrate associated with each worker.
 func WorkerReportedHashrate(addr string) ([]HashrateItem, error) {
-	jsonWorkers := []struct {
-		ID       string  `json:"worker"`
-		Hashrate float64 `json:"hashrate"`
-	}{}
+	jsonWorkers := []jsonWorkerHashrate{}
 	if err := fetch(&jsonWorkers, workersReportedHashrateEndpoint, addr); err != nil {
 		return nil, err
 	}

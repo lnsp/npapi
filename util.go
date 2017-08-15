@@ -37,8 +37,8 @@ func endpoint(b string, params ...interface{}) string {
 	return fmt.Sprintf(b, components...)
 }
 
-func parseHashrateMap(data map[Interval]string) (map[Interval]float64, error) {
-	result := make(map[Interval]float64)
+func parseStringMapToFloat(data map[string]string) (map[string]float64, error) {
+	result := make(map[string]float64)
 	for i, s := range data {
 		f, err := strconv.ParseFloat(s, 64)
 		if err != nil {
