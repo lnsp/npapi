@@ -28,4 +28,8 @@ const (
 	timeToNextEpochEndpoint               = "%s/network/timetonextepoch"
 	approximatedEarningsEndpoint          = "%s/approximated_earnings/%f"
 	pricesEndpoint                        = "%s/prices"
+	activeMinersEndpoint                  = "%s/pool/activeminers"
+	activeWorkersEndpoint                 = "%s/pool/activeworkers"
+	poolHashrateEndpoint                  = "%s/pool/hashrate"
+	topMinersEndpoint                     = "%s/pool/topminers"
 )
