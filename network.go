@@ -1,5 +1,7 @@
 package npapi
 
+import "time"
+
 // BlockStatItem is block metric measuring the difficulty and block time.
 type BlockStatItem struct {
 	// Block date
@@ -78,11 +80,11 @@ func LastBlockNumber() (uint, error) {
 	return number, nil
 }
 
-// TimeToNextEpoch returns the time in seconds until the next epoch.
-func TimeToNextEpoch() (float64, error) {
+// NextEpoch returns the time in seconds until the next epoch.
+func NextEpoch() (time.Time, error) {
 	var seconds float64
 	if err := fetch(&seconds, timeToNextEpochEndpoint); err != nil {
-		return seconds, err
+		return time.Now(), err
 	}
-	return seconds, nil
+	return time.Now().Add(time.Duration(float64(time.Second) * seconds)), nil
 }
