@@ -26,4 +26,6 @@ const (
 	blockEndpoint                         = "%s/blocks/%d/%d"
 	lastBlockNumberEndpoint               = "%s/network/lastblocknumber"
 	timeToNextEpochEndpoint               = "%s/network/timetonextepoch"
+	approximatedEarningsEndpoint          = "%s/approximated_earnings/%f"
+	pricesEndpoint                        = "%s/prices"
 )
