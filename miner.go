@@ -49,6 +49,11 @@ type Worker struct {
 	AverageHashrates map[Interval]float64
 }
 
+type HashrateItem struct {
+	ID       string
+	Hashrate float64
+}
+
 // User is a nanopool.org user identified by his address. A user can have multiple workers.
 type User struct {
 	Address            string
@@ -293,7 +298,7 @@ func ShareHistory(addr string) ([]ShareItem, error) {
 }
 
 // WorkersAverageHashrateIn retrieves a list of workers, each associated with its hashrate in the given interval.
-func WorkersAverageHashrateIn(addr string, interval uint) ([]Worker, error) {
+func WorkersAverageHashrateIn(addr string, interval uint) ([]HashrateItem, error) {
 	jsonWorkers := []struct {
 		ID       string  `json:"worker"`
 		Hashrate float64 `json:"hashrate"`
@@ -301,19 +306,15 @@ func WorkersAverageHashrateIn(addr string, interval uint) ([]Worker, error) {
 	if err := fetch(&jsonWorkers, workersAverageHashrateLimitedEndpoint, addr, interval); err != nil {
 		return nil, err
 	}
-	workers := make([]Worker, len(jsonWorkers))
+	workers := make([]HashrateItem, len(jsonWorkers))
 	for i, w := range jsonWorkers {
-		workers[i] = Worker{
-			ID:               w.ID,
-			Hashrate:         w.Hashrate,
-			AverageHashrates: map[Interval]float64{},
-		}
+		workers[i] = HashrateItem(w)
 	}
 	return workers, nil
 }
 
 // WorkerAverageHashrate retrieves a list of workers, each associated with its hashrates.
-func WorkersAverageHashrate(addr string) (map[Interval][]Worker, error) {
+func WorkersAverageHashrate(addr string) (map[Interval][]HashrateItem, error) {
 	jsonIntervals := map[Interval][]struct {
 		ID       string  `json:"worker"`
 		Hashrate float64 `json:"hashrate"`
@@ -321,15 +322,11 @@ func WorkersAverageHashrate(addr string) (map[Interval][]Worker, error) {
 	if err := fetch(&jsonIntervals, workersAverageHashrateEndpoint, addr); err != nil {
 		return nil, err
 	}
-	intervals := make(map[Interval][]Worker)
+	intervals := make(map[Interval][]HashrateItem)
 	for key, jsonWorkers := range jsonIntervals {
-		workers := make([]Worker, len(jsonWorkers))
+		workers := make([]HashrateItem, len(jsonWorkers))
 		for i, w := range jsonWorkers {
-			workers[i] = Worker{
-				ID:               w.ID,
-				Hashrate:         w.Hashrate,
-				AverageHashrates: map[Interval]float64{},
-			}
+			workers[i] = HashrateItem(w)
 		}
 		intervals[key] = workers
 	}
@@ -337,7 +334,7 @@ func WorkersAverageHashrate(addr string) (map[Interval][]Worker, error) {
 }
 
 // WorkerReportedHashrate retrieves the last reported hashrate associated with each worker.
-func WorkerReportedHashrate(addr string) ([]Worker, error) {
+func WorkerReportedHashrate(addr string) ([]HashrateItem, error) {
 	jsonWorkers := []struct {
 		ID       string  `json:"worker"`
 		Hashrate float64 `json:"hashrate"`
@@ -345,13 +342,9 @@ func WorkerReportedHashrate(addr string) ([]Worker, error) {
 	if err := fetch(&jsonWorkers, workersReportedHashrateEndpoint, addr); err != nil {
 		return nil, err
 	}
-	workers := make([]Worker, len(jsonWorkers))
+	workers := make([]HashrateItem, len(jsonWorkers))
 	for i, w := range jsonWorkers {
-		workers[i] = Worker{
-			ID:               w.ID,
-			Hashrate:         w.Hashrate,
-			AverageHashrates: map[Interval]float64{},
-		}
+		workers[i] = HashrateItem(w)
 	}
 	return workers, nil
 }
