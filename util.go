@@ -37,10 +37,14 @@ func endpoint(b string, params ...interface{}) string {
 	return fmt.Sprintf(b, components...)
 }
 
-func mustf(a string) float64 {
-	f, err := strconv.ParseFloat(a, 64)
-	if err != nil {
-		panic(err)
+func parseHashrateMap(data map[Interval]string) (map[Interval]float64, error) {
+	result := make(map[Interval]float64)
+	for i, s := range data {
+		f, err := strconv.ParseFloat(s, 64)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = f
 	}
-	return f
+	return result, nil
 }

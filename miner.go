@@ -30,38 +30,57 @@ func (t *Time) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// Interval is a hashrate interval.
 type Interval string
 
 // Payment is a nanopool.org payment.
 type Payment struct {
-	Date      Time
-	TxHash    string
-	Amount    float64
+	// Payment date
+	Date Time
+	// Payment transaction hash
+	TxHash string
+	// Payment amount
+	Amount float64
+	// Payment status
 	Confirmed bool
 }
 
 // Worker is a nanopool.org worker. It represents one mining machine.
 type Worker struct {
-	ID               string
-	Hashrate         float64
-	LastShare        Time
-	Rating           uint
+	// Worker ID
+	ID string
+	// Worker Hashrate [MH/s]
+	Hashrate float64
+	// Last Share date of Worker
+	LastShare Time
+	// Worker Rating
+	Rating uint
+	// Average hashrates
 	AverageHashrates map[Interval]float64
 }
 
+// HashrateItem stores an association between a worker and an (averaged) hashrate.
 type HashrateItem struct {
-	ID       string
+	// Worker ID
+	ID string
+	// Worker Hashrate [MH/s]
 	Hashrate float64
 }
 
 // User is a nanopool.org user identified by his address. A user can have multiple workers.
 type User struct {
-	Address            string
-	Balance            float64
+	// Account address
+	Address string
+	// Account balance
+	Balance float64
+	// Account unconfirmed balance
 	UnconfirmedBalance float64
-	Hashrate           float64
-	AverageHashrates   map[Interval]float64
-	Worker             []Worker
+	// Account hashrate [MH/s]
+	Hashrate float64
+	// Average hashrate [MH/s]
+	AverageHashrates map[Interval]float64
+	// Workers
+	Workers []Worker
 }
 
 // ChartItem stores hashrate metrics of a specific point in time.
@@ -90,7 +109,7 @@ func UserInfo(addr string) (*User, error) {
 		UnconfirmedBalance string              `json:"unconfirmed_balance"`
 		Hashrate           string              `json:"hashrate"`
 		AverageHashrates   map[Interval]string `json:"avghashrate"`
-		Worker             []struct {
+		Workers            []struct {
 			ID                 string `json:"id"`
 			Hashrate           string `json:"hashrate"`
 			LastShare          Time   `json:"lastShare"`
@@ -104,34 +123,53 @@ func UserInfo(addr string) (*User, error) {
 	if err := fetch(&user, userEndpoint, addr); err != nil {
 		return nil, err
 	}
-	worker := make([]Worker, len(user.Worker))
-	for i, w := range user.Worker {
-		worker[i] = Worker{
-			ID:        w.ID,
-			Hashrate:  mustf(w.Hashrate),
-			LastShare: w.LastShare,
-			AverageHashrates: map[Interval]float64{
-				OneHour:         mustf(w.AvgOneHour),
-				ThreeHours:      mustf(w.AvgThreeHours),
-				SixHours:        mustf(w.AvgSixHours),
-				TwelveHours:     mustf(w.AvgTwelveHours),
-				TwentyfourHours: mustf(w.AvgTwentyfourHours),
-			},
+	workers := make([]Worker, len(user.Workers))
+	for i, w := range user.Workers {
+		averageHashrates, err := parseHashrateMap(map[Interval]string{
+			OneHour:         w.AvgOneHour,
+			ThreeHours:      w.AvgThreeHours,
+			SixHours:        w.AvgSixHours,
+			TwelveHours:     w.AvgTwelveHours,
+			TwentyfourHours: w.AvgTwentyfourHours,
+		})
+		if err != nil {
+			return nil, err
 		}
+		currentHashrate, err := strconv.ParseFloat(w.Hashrate, 64)
+		if err != nil {
+			return nil, err
+		}
+		workers[i] = Worker{
+			ID:               w.ID,
+			Hashrate:         currentHashrate,
+			LastShare:        w.LastShare,
+			AverageHashrates: averageHashrates,
+		}
+	}
+
+	averageHashrates, err := parseHashrateMap(user.AverageHashrates)
+	if err != nil {
+		return nil, err
+	}
+	balance, err := strconv.ParseFloat(user.Balance, 64)
+	if err != nil {
+		return nil, err
+	}
+	unconfirmedBalance, err := strconv.ParseFloat(user.UnconfirmedBalance, 64)
+	if err != nil {
+		return nil, err
+	}
+	currentHashrate, err := strconv.ParseFloat(user.Hashrate, 64)
+	if err != nil {
+		return nil, err
 	}
 	return &User{
 		Address:            addr,
-		Balance:            mustf(user.Balance),
-		UnconfirmedBalance: mustf(user.UnconfirmedBalance),
-		Hashrate:           mustf(user.Hashrate),
-		AverageHashrates: map[Interval]float64{
-			OneHour:         mustf(user.AverageHashrates[OneHour]),
-			ThreeHours:      mustf(user.AverageHashrates[ThreeHours]),
-			SixHours:        mustf(user.AverageHashrates[SixHours]),
-			TwelveHours:     mustf(user.AverageHashrates[TwelveHours]),
-			TwentyfourHours: mustf(user.AverageHashrates[TwentyfourHours]),
-		},
-		Worker: worker,
+		Balance:            balance,
+		UnconfirmedBalance: unconfirmedBalance,
+		Hashrate:           currentHashrate,
+		AverageHashrates:   averageHashrates,
+		Workers:            workers,
 	}, nil
 }
 
