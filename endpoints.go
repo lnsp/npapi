@@ -32,4 +32,11 @@ const (
 	activeWorkersEndpoint                 = "%s/pool/activeworkers"
 	poolHashrateEndpoint                  = "%s/pool/hashrate"
 	topMinersEndpoint                     = "%s/pool/topminers"
+	workerAverageHashrateLimitedEndpoint  = "%s/avghashratelimited/%s/%s/%d"
+	workerAverageHashrateEndpoint         = "%s/avghashrate/%s/%s"
+	workerHashrateChartEndpoint           = "%s/hashratechart/%s/%s"
+	workerCurrentHashrateEndpoint         = "%s/hashrate/%s/%s"
+	workerHistoryEndpoint                 = "%s/history/%s/%s"
+	workerReportedHashrateEndpoint        = "%s/reportedhashrate/%s/%s"
+	workerShareRateHistoryEndpoint        = "%s/shareratehistory/%s/%s"
 )
