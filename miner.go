@@ -85,20 +85,27 @@ type User struct {
 
 // ChartItem stores hashrate metrics of a specific point in time.
 type ChartItem struct {
-	Date     Time
-	Shares   uint
+	// Date
+	Date Time
+	// Number of shares for last 10 minutes
+	Shares uint
+	// Miner reported hashrate [MH/s]
 	Hashrate float64
 }
 
 // HistoryItem stores hashrate history metrics.
 type HistoryItem struct {
-	Date     Time
+	// Item date
+	Date Time
+	// Miner hashrate [MH/s]
 	Hashrate float64
 }
 
 // ShareItem stores share history metrics.
 type ShareItem struct {
-	Date   Time
+	// Item date
+	Date Time
+	// Number of shares for last 10 minutes
 	Shares uint
 }
 
