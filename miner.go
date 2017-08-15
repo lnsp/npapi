@@ -387,8 +387,8 @@ func WorkersAverageHashrate(addr string) (WorkerHashrateReport, error) {
 	}, nil
 }
 
-// WorkerReportedHashrate retrieves the last reported hashrate associated with each worker.
-func WorkerReportedHashrate(addr string) ([]HashrateItem, error) {
+// WorkersReportedHashrate retrieves the last reported hashrate associated with each worker.
+func WorkersReportedHashrate(addr string) ([]HashrateItem, error) {
 	jsonWorkers := []jsonWorkerHashrate{}
 	if err := fetch(&jsonWorkers, workersReportedHashrateEndpoint, addr); err != nil {
 		return nil, err
